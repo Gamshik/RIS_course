@@ -5,16 +5,13 @@ namespace MasterNode
 {
     public class ProgressSender
     {
-        private readonly UdpClient _udpClient;
+        private readonly ReliableUdpSenderWithQueue _sender;
 
         public ProgressSender()
         {
-            _udpClient = new UdpClient();
+            _sender = new ReliableUdpSenderWithQueue();
         }
 
-        /// <summary>
-        /// Универсальный метод — сам считает processedImages
-        /// </summary>
         public async Task SendProgressAsync(ImageTask task, int totalImages, int processedImages, string info = "")
         {
             var message = new ProgressMessage(
@@ -29,8 +26,8 @@ namespace MasterNode
             try
             {
                 byte[] data = MessageSerializer.SerializeProgressMessage(message);
-                Console.WriteLine($"Send process: {task.ClientUdpEndpoint}, {task.Status}");
-                await _udpClient.SendAsync(data, data.Length, task.ClientUdpEndpoint);
+
+                _sender.Enqueue(data, task.ClientUdpEndpoint);
             }
             catch (Exception ex)
             {
@@ -46,7 +43,7 @@ namespace MasterNode
 
         public void Close()
         {
-            try { _udpClient?.Close(); } catch { }
+            try { _sender.Close(); } catch { }
         }
     }
 }

@@ -33,7 +33,6 @@ namespace SlaveNode
 
                 Bitmap processedImage;
 
-                Console.WriteLine($"[{_slaveName}] Используется стандартный алгоритм");
                 processedImage = RobertsOperator.ApplyRobertsOperatorParallel(sourceImage);
 
                 // Определяем формат для сохранения

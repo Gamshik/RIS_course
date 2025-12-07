@@ -26,6 +26,9 @@ namespace MasterNode
             _progressSender = progressSender;
         }
 
+        /// <summary>
+        /// Добавляет батч в очередь.
+        /// </summary>
         public void EnqueueBatch(long batchId, ImageTask task)
         {
             int currentRemaining = _batchRemaining.AddOrUpdate(batchId, 1, (_, old) => old + 1);
@@ -69,16 +72,6 @@ namespace MasterNode
         }
 
         /// <summary>
-        /// Переводит активную задачу обратно в очередь (например, при разрыве соединения со Slave).
-        /// </summary>
-        public void RequeueTask(ImageTask task)
-        {
-            task.SetError(); // Устанавливаем статус ошибки для клиента
-
-            HandleTaskFailure(task, $"Задача ID {task.ImageId} не выполнена: Slave отключился или произошла ошибка.");
-        }
-
-        /// <summary>
         /// Запрашивает попытку назначения задачи. Вызывается после подключения Slave или получения результата.
         /// </summary>
         public void RequestTaskAssignment()
@@ -104,6 +97,7 @@ namespace MasterNode
                     SlaveHandler slave = _slaves[_nextSlaveIndex];
                     _nextSlaveIndex = (_nextSlaveIndex + 1) % _slaves.Count;
 
+                    Console.WriteLine($"[Scheduler] Slave-{slave.SlaveId} доступен - {slave.IsAvailable}");
                     if (slave.IsAvailable && _taskQueue.TryDequeue(out ImageTask task))
                     {
                         task.SetProcessing(slave);
@@ -117,7 +111,7 @@ namespace MasterNode
                             catch (Exception ex)
                             {
                                 Console.WriteLine($"[Scheduler] Ошибка при назначении задачи на Slave {slave.SlaveId}: {ex}");
-                                RequeueTask(task);
+                                HandleTaskFailure(task, $"Задача ID {task.ImageId} не выполнена: Slave отключился или произошла ошибка.");
                             }
                         });
 
@@ -178,6 +172,9 @@ namespace MasterNode
             _imageToBatchId.TryRemove(task.ImageId, out _);
         }
 
+        /// <summary>
+        /// Отправляет результат клиенту.
+        /// </summary>
         private async Task SendResultToClient(ImageTask task, ImageMessage resultMessage)
         {
             if (!_imageToBatchId.TryGetValue(task.ImageId, out long batchId))
@@ -215,21 +212,18 @@ namespace MasterNode
             }
         }
 
-        public void HandleTaskFailure(ImageTask task, string errorMessage)
+        /// <summary>
+        /// Обрабатывает ошибку решения задачи.
+        /// Отправляет клиенту сообщение об ошибке, 
+        /// кидает задачу обратно в очередь для повторной обработки
+        /// </summary>
+        private void HandleTaskFailure(ImageTask task, string errorMessage)
         {
             task.SetError();
             Console.WriteLine($"[Scheduler] Ошибка задачи ID {task.ImageId}: {errorMessage}");
 
-            var errorResult = new ImageMessage(
-                task.ImageId,
-                "ERROR", 0, 0, 0,
-                System.Text.Encoding.UTF8.GetBytes($"Ошибка обработки: {errorMessage}")
-            );
-
-            SendResultToClient(task, errorResult); 
             UpdateTaskStatus(task.ImageId, task.Status, "Ошибка: " + errorMessage);
-            _activeTasks.TryRemove(task.ImageId, out _);
-            _imageToBatchId.TryRemove(task.ImageId, out _);
+            _taskQueue.Enqueue(task);
         }
     }
 }

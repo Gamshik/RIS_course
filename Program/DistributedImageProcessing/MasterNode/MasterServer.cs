@@ -11,7 +11,6 @@ namespace MasterNode
     {
         private readonly int _slavePort;
         private readonly int _clientPort;
-        //private readonly int _udpPort;
         private TcpListener _slaveListener;
         private TcpListener _clientListener;
         private readonly TaskScheduler _scheduler;
@@ -22,7 +21,6 @@ namespace MasterNode
         {
             _slavePort = slavePort;
             _clientPort = clientPort;
-            //_udpPort = udpPort;
             _progressSender = new ProgressSender();
             _scheduler = new TaskScheduler(_progressSender);
         }
@@ -44,7 +42,6 @@ namespace MasterNode
             _clientListener.Start();
             Console.WriteLine($"[MasterTCP] Сервер для Клиентов запущен на порту {_clientPort}...");
 
-            // 3. Запуск основного цикла приема подключений
             Task slaveTask = ListenForSlavesAsync(cancellationToken);
             Task clientTask = ListenForClientsAsync(cancellationToken);
 
@@ -130,7 +127,6 @@ namespace MasterNode
 
             try
             {
-                // Читаем заголовок
                 byte[] header = new byte[8];
                 await ReadExactAsync(stream, header, 0, 8, cancellationToken);
 
@@ -177,10 +173,8 @@ namespace MasterNode
             {
                 int read = await stream.ReadAsync(buffer, offset + totalRead, count - totalRead, cancellationToken);
                 if (read == 0)
-                {
-                    // Явный EOF — прерываем с исключением, чтобы не продолжать с частичными данными
                     throw new EndOfStreamException("Remote closed connection while reading data.");
-                }
+                
                 totalRead += read;
             }
             return totalRead;

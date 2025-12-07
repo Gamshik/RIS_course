@@ -41,6 +41,8 @@ namespace ClientApp.Services
                 await stream.WriteAsync(batchData, cancellationToken);
                 await stream.FlushAsync(cancellationToken);
 
+                var sw = Stopwatch.StartNew();
+
                 _ = ListenForProgressAsync(ClientUdpPort, cancellationToken);
 
                 int expectedResults = batch.Images.Count;
@@ -72,14 +74,15 @@ namespace ClientApp.Services
 
                     var result = MessageSerializer.DeserializeImageMessage(payload, messageType, payloadLength);
     
-                    if (messageType == (int)MessageType.MasterToClientResult)
+                    if (messageType == (int)MessageType.MasterToClientResult && result.FileName != "ERROR")
                     {
                         TaskCompleted?.Invoke(result);
                         received++;
-                        Debug.WriteLine($"DEBUG:received: {(int)received} ");
                     }
                 }
 
+                sw.Stop();
+                Debug.WriteLine($"Время выполнения: {sw.ElapsedMilliseconds} мс");
             }
             catch (Exception ex)
             {
@@ -98,27 +101,11 @@ namespace ClientApp.Services
             try
             {
                 udpClient = new UdpClient(localUdpPort);
-                ackClient = new UdpClient(); // для отправки ACK
+                ackClient = new UdpClient(); 
                 udpClient.Client.ReceiveBufferSize = 1024 * 1024;
 
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    //UdpReceiveResult result;
-                    //try
-                    //{
-                    //    result = await udpClient.ReceiveAsync();
-                    //}
-                    //catch (SocketException)
-                    //{
-                    //    if (!cancellationToken.IsCancellationRequested)
-                    //    {
-                    //        await Task.Delay(100, cancellationToken);
-                    //    }
-                    //    continue;
-                    //}
-
-                    //ProgressMessage progress = MessageSerializer.DeserializeProgressMessage(result.Buffer);
-
                     UdpReceiveResult result = await udpClient.ReceiveAsync();
 
                     int seq = BitConverter.ToInt32(result.Buffer, 0);
@@ -128,7 +115,6 @@ namespace ClientApp.Services
 
                     ProgressMessage progress = MessageSerializer.DeserializeProgressMessage(msgData);
 
-                    // отправляем ACK
                     byte[] ack = BitConverter.GetBytes(seq);
                     await ackClient.SendAsync(ack, ack.Length, result.RemoteEndPoint);
 
@@ -142,9 +128,6 @@ namespace ClientApp.Services
                     };
 
                     ProgressUpdated?.Invoke(new UpdateTaskStatusData { FileName = progress.FileName, StatusText = statusText });
-
-                    if (progress.Status >= 2)
-                        break;
                 }
             }
             catch (Exception ex)

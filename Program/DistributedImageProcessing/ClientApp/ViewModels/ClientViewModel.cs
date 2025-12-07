@@ -130,11 +130,15 @@ namespace ClientApp.ViewModels
             {
                 var item = Images.FirstOrDefault(i => i.FileName == data.FileName);
 
-                Debug.WriteLine($"Data FILENAME: {data.FileName}");
-
                 if (item != null)
                 {
                     item.Status = data.StatusText;
+                }
+
+                if (Images.All(i => i.Status.ToLower().Contains("завершено") || i.Status.ToLower().Contains("ошибка")))
+                {
+                    ProgressText = "ВСЕ ЗАДАЧИ ЗАВЕРШЕНЫ!";
+                    IsProcessing = false;
                 }
             });
         }
@@ -150,7 +154,7 @@ namespace ClientApp.ViewModels
                     item.Processed = BytesToBitmapSource(result.ImageData);
                 }
 
-                if (Images.All(i => i.Status == "Готово" || i.Status.Contains("Ошибка")))
+                if (Images.All(i => i.Status.ToLower().Contains("завершено") || i.Status.ToLower().Contains("ошибка")))
                 {
                     ProgressText = "ВСЕ ЗАДАЧИ ЗАВЕРШЕНЫ!";
                     IsProcessing = false;

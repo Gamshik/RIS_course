@@ -5,7 +5,6 @@ namespace MasterNode
 {
     /// <summary>
     /// Обработчик одного Slave-узла.
-    /// ИСПРАВЛЕНО: Синхронная модель - отправили задачу, ждём результат
     /// </summary>
     public class SlaveHandler
     {
@@ -17,13 +16,25 @@ namespace MasterNode
         private readonly object _lock = new object();
         private bool _isDisconnected = false;
 
-        public bool IsAvailable { get; private set; } = true;
+        private bool _isAvailable = true;
+
+        public bool IsAvailable 
+        {
+            get
+            {
+                lock (_lock) { return _isAvailable; }
+            }
+            private set
+            {
+                lock (_lock) { _isAvailable = value; }
+            }
+        }
+
         public string SlaveId => _slaveId;
 
         public SlaveHandler(TcpClient client, TaskScheduler scheduler)
         {
             _client = client;
-            // ВАЖНО: Отключаем алгоритм Nagle
             _client.NoDelay = true;
             _stream = client.GetStream();
             _scheduler = scheduler;
@@ -32,6 +43,9 @@ namespace MasterNode
             Console.WriteLine($"[Slave-{_slaveId}] Установлено соединение от Slave: {_client.Client.RemoteEndPoint}");
         }
 
+        /// <summary>
+        /// Слушает соединение со Slave-узлом, чтобы корректно закрыть
+        /// </summary>
         public async Task StartListeningAsync(CancellationToken cancellationToken)
         {
             try
@@ -83,7 +97,8 @@ namespace MasterNode
 
                 _scheduler.UpdateTaskStatus(task.ImageId, 1, _slaveId);
 
-               await Task.Delay(1000);
+               // DELAY IMITATION
+               //await Task.Delay(1000);
 
                 await ReceiveResultAsync();
             }
@@ -132,9 +147,7 @@ namespace MasterNode
                 bytesRead = await ReadExactAsync(_stream, payload, 0, payloadLength);
 
                 if (bytesRead < payloadLength)
-                {
                     throw new Exception($"Получено {bytesRead} из {payloadLength} байт");
-                }
 
                 ImageMessage resultMessage = MessageSerializer.DeserializeImageMessage(payload, messageType, payloadLength);
 

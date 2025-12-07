@@ -143,9 +143,7 @@ namespace SlaveNode
                 int read = await stream.ReadAsync(buffer, offset + totalRead, count - totalRead, cancellationToken);
 
                 if (read == 0)
-                {
                     return totalRead;
-                }
 
                 totalRead += read;
             }
