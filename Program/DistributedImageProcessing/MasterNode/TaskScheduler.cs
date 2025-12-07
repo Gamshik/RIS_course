@@ -41,6 +41,8 @@ namespace MasterNode
             _taskQueue.Enqueue(task);
             _activeTasks.TryAdd(task.ImageId, task);
 
+            UpdateTaskStatus(task.ImageId, 0);
+
             Console.WriteLine($"[Scheduler] Задача ID {task.ImageId} из батча {batchId} добавлена в очередь ({currentRemaining}/{currentTotal})");
 
             AssignNextTask();
@@ -100,6 +102,7 @@ namespace MasterNode
                     Console.WriteLine($"[Scheduler] Slave-{slave.SlaveId} доступен - {slave.IsAvailable}");
                     if (slave.IsAvailable && _taskQueue.TryDequeue(out ImageTask task))
                     {
+                        slave.SetAvailable(false);
                         task.SetProcessing(slave);
 
                         _ = Task.Run(async () =>
@@ -118,7 +121,7 @@ namespace MasterNode
                         Console.WriteLine($"[Scheduler] Назначена задача ID {task.ImageId} узлу {slave.SlaveId}. Задач в очереди: {_taskQueue.Count}");
 
                         taskAssigned = true;
-                        break; 
+                        break;
                     }
 
                 } while (_nextSlaveIndex != startIndex);
@@ -164,6 +167,9 @@ namespace MasterNode
                 _batchProcessedImages.AddOrUpdate(batchId, 1, (k, v) => v + 1);
 
             Console.WriteLine($"[Scheduler] Задача ID {task.ImageId} завершена");
+
+            // DELAY IMITATION
+            await Task.Delay(1000);
 
             await SendResultToClient(task, resultMessage);
 

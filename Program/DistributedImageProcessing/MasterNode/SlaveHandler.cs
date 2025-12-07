@@ -1,5 +1,7 @@
-﻿using System.Net.Sockets;
-using Common.Messages;
+﻿using Common.Messages;
+using System.Net.Sockets;
+using System.Numerics;
+using System.Threading.Tasks;
 
 namespace MasterNode
 {
@@ -43,6 +45,14 @@ namespace MasterNode
             Console.WriteLine($"[Slave-{_slaveId}] Установлено соединение от Slave: {_client.Client.RemoteEndPoint}");
         }
 
+        public void SetAvailable(bool val)
+        {
+            lock (_lock)
+            {
+                IsAvailable = false;
+            }
+        }
+
         /// <summary>
         /// Слушает соединение со Slave-узлом, чтобы корректно закрыть
         /// </summary>
@@ -72,7 +82,7 @@ namespace MasterNode
         {
             lock (_lock)
             {
-                if (!IsAvailable || _isDisconnected)
+                if (_isDisconnected)
                 {
                     throw new InvalidOperationException($"Slave {_slaveId} не доступен для приема новой задачи.");
                 }
@@ -95,10 +105,10 @@ namespace MasterNode
 
                 Console.WriteLine($"[Master] Задача ID {task.ImageId} отправлена узлу - Slave-{_slaveId} (размер: {taskData.Length} байт).");
 
-                _scheduler.UpdateTaskStatus(task.ImageId, 1, _slaveId);
+                // DELAY IMITATION
+                await Task.Delay(1000);
 
-               // DELAY IMITATION
-               //await Task.Delay(1000);
+                _scheduler.UpdateTaskStatus(task.ImageId, 1, _slaveId);
 
                 await ReceiveResultAsync();
             }

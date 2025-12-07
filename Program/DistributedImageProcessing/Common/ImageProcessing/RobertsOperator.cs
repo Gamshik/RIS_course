@@ -72,12 +72,10 @@ namespace Common.ImageProcessing
                         pRes[0] = pRes[1] = pRes[2] = (byte)gradient;
                     }
 
-                    // Последний пиксель строки делаем чёрным
                     byte* pBlack = rowDst + (width - 1) * 3;
                     pBlack[0] = pBlack[1] = pBlack[2] = 0;
                 });
 
-                // Последняя строка — чёрная
                 byte* lastRow = dstPtr + (height - 1) * strideDst;
                 for (int x = 0; x < width; x++)
                 {

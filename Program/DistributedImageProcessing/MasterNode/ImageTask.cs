@@ -48,6 +48,12 @@ namespace MasterNode
             CurrentSlave = null;
         }
 
+        public void SetQueue(SlaveHandler slave)
+        {
+            Status = 0; // Обрабатывается
+            CurrentSlave = slave;
+        }
+
         public void SetProcessing(SlaveHandler slave)
         {
             Status = 1; // Обрабатывается

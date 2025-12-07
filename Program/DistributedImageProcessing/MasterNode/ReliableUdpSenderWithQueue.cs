@@ -37,7 +37,7 @@ namespace MasterNode
 
                     await SendReliableAsync(data, endpoint);
 
-                    await Task.Delay(1);
+                    //await Task.Delay(1);
                 }
                 catch (OperationCanceledException)
                 {
@@ -73,7 +73,7 @@ namespace MasterNode
                     // ignore timeout, retry
                 }
 
-                await Task.Delay(1);
+                //await Task.Delay(1);
             }
 
             Console.WriteLine($"[UDP] НЕ доставлено после 5 попыток → seq {seq}");

@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SlaveNode", "SlaveNode\Slav
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientApp", "ClientApp\ClientApp.csproj", "{14D12B03-8418-4EDD-B250-475E5BD0CC3D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RobertsOperator_Tests", "RobertsOperator_Tests\RobertsOperator_Tests.csproj", "{D64BC6AE-4064-4466-A6F3-8B664417420F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{14D12B03-8418-4EDD-B250-475E5BD0CC3D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{14D12B03-8418-4EDD-B250-475E5BD0CC3D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{14D12B03-8418-4EDD-B250-475E5BD0CC3D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D64BC6AE-4064-4466-A6F3-8B664417420F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D64BC6AE-4064-4466-A6F3-8B664417420F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D64BC6AE-4064-4466-A6F3-8B664417420F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D64BC6AE-4064-4466-A6F3-8B664417420F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
