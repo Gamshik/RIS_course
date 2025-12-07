@@ -106,7 +106,7 @@ namespace MasterNode
                 Console.WriteLine($"[Master] Задача ID {task.ImageId} отправлена узлу - Slave-{_slaveId} (размер: {taskData.Length} байт).");
 
                 // DELAY IMITATION
-                //await Task.Delay(1000);
+                await Task.Delay(1000);
 
                 _scheduler.UpdateTaskStatus(task.ImageId, 1, _slaveId);
 
