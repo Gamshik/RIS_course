@@ -8,12 +8,10 @@
             Console.WriteLine("   SLAVE NODE - Обработчик изображений");
             Console.WriteLine("====================================\n");
 
-            // Параметры подключения
             string slaveName = "Slave-1";
-            string masterHost = "127.0.0.1"; // localhost
+            string masterHost = "127.0.0.1";
             int masterPort = 5000;
 
-            // Если передали аргументы командной строки
             if (args.Length >= 1)
             {
                 slaveName = args[0];
@@ -37,7 +35,6 @@
             // Создаём CancellationToken для корректной остановки
             CancellationTokenSource cts = new CancellationTokenSource();
 
-            // Обработка Ctrl+C для корректного завершения
             Console.CancelKeyPress += (sender, e) =>
             {
                 e.Cancel = true;
@@ -45,7 +42,6 @@
                 cts.Cancel();
             };
 
-            // Создаём и запускаем Slave-узел
             SlaveWorker worker = new(slaveName, masterHost, masterPort);
 
             try

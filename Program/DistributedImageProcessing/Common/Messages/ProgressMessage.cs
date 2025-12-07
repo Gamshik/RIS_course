@@ -11,6 +11,11 @@
         public int ImageId { get; set; }
 
         /// <summary>
+        /// название файла
+        /// </summary>
+        public string FileName { get; set; }
+
+        /// <summary>
         /// Общее количество изображений в очереди
         /// </summary>
         public int TotalImages { get; set; }
@@ -35,9 +40,10 @@
             Info = string.Empty;
         }
 
-        public ProgressMessage(int imageId, int totalImages, int processedImages, int status, string info = "")
+        public ProgressMessage(int imageId, int totalImages, int processedImages, int status, string fileName, string info = "")
         {
             ImageId = imageId;
+            FileName = fileName;
             TotalImages = totalImages;
             ProcessedImages = processedImages;
             Status = status;

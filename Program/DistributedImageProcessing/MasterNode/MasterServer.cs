@@ -11,19 +11,19 @@ namespace MasterNode
     {
         private readonly int _slavePort;
         private readonly int _clientPort;
-        private readonly int _udpPort;
+        //private readonly int _udpPort;
         private TcpListener _slaveListener;
         private TcpListener _clientListener;
         private readonly TaskScheduler _scheduler;
         private readonly ProgressSender _progressSender;
         private bool _isRunning;
 
-        public MasterServer(int slavePort, int clientPort, int udpPort)
+        public MasterServer(int slavePort, int clientPort)
         {
             _slavePort = slavePort;
             _clientPort = clientPort;
-            _udpPort = udpPort;
-            _progressSender = new ProgressSender(udpPort);
+            //_udpPort = udpPort;
+            _progressSender = new ProgressSender();
             _scheduler = new TaskScheduler(_progressSender);
         }
 
@@ -34,12 +34,12 @@ namespace MasterNode
         {
             _isRunning = true;
 
-            // 1. Запуск слушателя для Slave-узлов
+            // Запуск слушателя для Slave-узлов
             _slaveListener = new TcpListener(IPAddress.Any, _slavePort);
             _slaveListener.Start();
             Console.WriteLine($"[MasterTCP] Сервер для Slave запущен на порту {_slavePort}...");
 
-            // 2. Запуск слушателя для Клиентов
+            // Запуск слушателя для Клиентов
             _clientListener = new TcpListener(IPAddress.Any, _clientPort);
             _clientListener.Start();
             Console.WriteLine($"[MasterTCP] Сервер для Клиентов запущен на порту {_clientPort}...");
@@ -146,7 +146,6 @@ namespace MasterNode
 
                 Console.WriteLine($"[Master] Получен батч {batch.BatchId} — {batch.Images.Count} изображений");
 
-                // Добавляем задачи — и всё! Больше НИЧЕГО не делаем в этом методе
                 foreach (var img in batch.Images)
                 {
                     var task = new ImageTask(img, stream, clientUdpEndpoint);
@@ -155,7 +154,6 @@ namespace MasterNode
             }
             catch (Exception ex)
             {
-                // Только если клиент отвалился на этапе чтения батча
                 Console.WriteLine($"[ClientHandler] Клиент отвалился при чтении батча: {ex.Message}");
                 tcpClient.Close();
             }

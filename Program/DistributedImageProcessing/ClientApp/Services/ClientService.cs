@@ -6,6 +6,11 @@ using System.Net.Sockets;
 
 namespace ClientApp.Services
 {
+    public class UpdateTaskStatusData
+    {
+        public string FileName { get; set; }
+        public string StatusText { get; set; }
+    }
     /// <summary>
     /// Сервис для управления сетевым взаимодействием с MasterNode.
     /// </summary>
@@ -14,7 +19,7 @@ namespace ClientApp.Services
         private readonly IPEndPoint _masterTcpEndpoint;
         private const int ClientUdpPort = 6000;
 
-        public event Action<string> ProgressUpdated;
+        public event Action<UpdateTaskStatusData> ProgressUpdated;
         public event Action<ImageMessage> TaskCompleted;
         public event Action<string> ErrorOccurred;
 
@@ -22,7 +27,7 @@ namespace ClientApp.Services
         {
             _masterTcpEndpoint = new IPEndPoint(IPAddress.Parse(masterHost), masterTcpPort);
         }
-        public async Task SendTaskAndReceiveResultAsync(BatchRequestMessage batch, CancellationToken cancellationToken)
+        public async Task SendBatchAndReceiveResultAsync(BatchRequestMessage batch, CancellationToken cancellationToken)
         {
             TcpClient tcpClient = new();
             NetworkStream stream = null;
@@ -55,8 +60,9 @@ namespace ClientApp.Services
                         throw new EndOfStreamException("Не удалось прочитать полный заголовок.");
                     }
 
+                    int messageType = BitConverter.ToInt32(header, 0);
                     int payloadLength = BitConverter.ToInt32(header, 4);
-                    if (payloadLength < 0 || payloadLength > 50_000_000)
+                    if (payloadLength < 0)
                         throw new Exception($"Некорректная длина payload: {payloadLength}");
 
                     byte[] payload = new byte[payloadLength];
@@ -64,13 +70,9 @@ namespace ClientApp.Services
                     if (readPayload < payloadLength)
                         throw new EndOfStreamException("Не удалось прочитать полный payload.");
 
-                    byte[] full = new byte[8 + payloadLength];
-                    Buffer.BlockCopy(header, 0, full, 0, 8);
-                    Buffer.BlockCopy(payload, 0, full, 8, payloadLength);
-
-                    var result = MessageSerializer.DeserializeImageMessage(full, out var type);
-                    Debug.WriteLine($"DEBUG:type: {(int)type} ");
-                    if (type == MessageType.MasterToClientResult)
+                    var result = MessageSerializer.DeserializeImageMessage(payload, messageType, payloadLength);
+    
+                    if (messageType == (int)MessageType.MasterToClientResult)
                     {
                         TaskCompleted?.Invoke(result);
                         received++;
@@ -92,28 +94,43 @@ namespace ClientApp.Services
         private async Task ListenForProgressAsync(int localUdpPort, CancellationToken cancellationToken)
         {
             UdpClient udpClient = null;
+            UdpClient ackClient = null;
             try
             {
                 udpClient = new UdpClient(localUdpPort);
-                udpClient.Client.ReceiveTimeout = 5000;
+                ackClient = new UdpClient(); // для отправки ACK
+                udpClient.Client.ReceiveBufferSize = 1024 * 1024;
 
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    UdpReceiveResult result;
-                    try
-                    {
-                        result = await udpClient.ReceiveAsync();
-                    }
-                    catch (SocketException)
-                    {
-                        if (!cancellationToken.IsCancellationRequested)
-                        {
-                            await Task.Delay(100, cancellationToken);
-                        }
-                        continue;
-                    }
+                    //UdpReceiveResult result;
+                    //try
+                    //{
+                    //    result = await udpClient.ReceiveAsync();
+                    //}
+                    //catch (SocketException)
+                    //{
+                    //    if (!cancellationToken.IsCancellationRequested)
+                    //    {
+                    //        await Task.Delay(100, cancellationToken);
+                    //    }
+                    //    continue;
+                    //}
 
-                    ProgressMessage progress = MessageSerializer.DeserializeProgressMessage(result.Buffer);
+                    //ProgressMessage progress = MessageSerializer.DeserializeProgressMessage(result.Buffer);
+
+                    UdpReceiveResult result = await udpClient.ReceiveAsync();
+
+                    int seq = BitConverter.ToInt32(result.Buffer, 0);
+
+                    byte[] msgData = new byte[result.Buffer.Length - 4];
+                    Buffer.BlockCopy(result.Buffer, 4, msgData, 0, msgData.Length);
+
+                    ProgressMessage progress = MessageSerializer.DeserializeProgressMessage(msgData);
+
+                    // отправляем ACK
+                    byte[] ack = BitConverter.GetBytes(seq);
+                    await ackClient.SendAsync(ack, ack.Length, result.RemoteEndPoint);
 
                     string statusText = progress.Status switch
                     {
@@ -124,18 +141,10 @@ namespace ClientApp.Services
                         _ => "Неизвестный статус"
                     };
 
-                    string progressInfo = progress.Status == 2
-                        ? $"[100% | Завершено]"
-                        : progress.Status == 3
-                            ? $"[ОШИБКА] {progress.Info}"
-                            : $"[{statusText}] Детали: {progress.Info}";
-
-                    ProgressUpdated?.Invoke(progressInfo);
+                    ProgressUpdated?.Invoke(new UpdateTaskStatusData { FileName = progress.FileName, StatusText = statusText });
 
                     if (progress.Status >= 2)
-                    {
                         break;
-                    }
                 }
             }
             catch (Exception ex)
@@ -145,6 +154,7 @@ namespace ClientApp.Services
             finally
             {
                 udpClient?.Close();
+                ackClient?.Close();
             }
         }
 

@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Common.Messages
+﻿namespace Common.Messages
 {
     /// <summary>
     /// Сообщение от клиента: "Вот тебе сразу несколько изображений, обработай их все"

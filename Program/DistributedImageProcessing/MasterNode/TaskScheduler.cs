@@ -43,14 +43,6 @@ namespace MasterNode
             AssignNextTask();
         }
 
-        public void EnqueueTask(ImageTask task) 
-        {
-            _taskQueue.Enqueue(task);
-            _activeTasks.TryAdd(task.ImageId, task);
-            Console.WriteLine($"[Scheduler] Новая задача ID {task.ImageId} добавлена. В очереди: {_taskQueue.Count}");
-            AssignNextTask();
-        }
-
         /// <summary>
         /// Добавляет Slave-узел в список доступных.
         /// </summary>
@@ -130,7 +122,6 @@ namespace MasterNode
                         });
 
                         Console.WriteLine($"[Scheduler] Назначена задача ID {task.ImageId} узлу {slave.SlaveId}. Задач в очереди: {_taskQueue.Count}");
-                        UpdateTaskStatus(task.ImageId, task.Status, slave.SlaveId);
 
                         taskAssigned = true;
                         break; 
@@ -144,7 +135,6 @@ namespace MasterNode
                 }
             }
         }
-
 
         /// <summary>
         /// Обновляет статус задачи и отправляет уведомление о прогрессе.

@@ -59,7 +59,7 @@ namespace Common.Messages
         public int GetSize()
         {
             // 4 (ImageId) + 4 (длина имени) + длина имени + 4 (Width) + 4 (Height) + 4 (Format) + длина данных
-            return 4 + 4 + System.Text.Encoding.UTF8.GetByteCount(FileName) + 4 + 4 + 4 + ImageData.Length;
+            return 4 + 4 + System.Text.Encoding.UTF8.GetByteCount(FileName) + 4 + 4 + 4 + 4 + ImageData.Length;
         }
     }
 }

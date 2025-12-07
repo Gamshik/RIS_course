@@ -12,33 +12,9 @@ using System.Windows.Media.Imaging;
 
 namespace ClientApp.ViewModels
 {
-    public class ImageItem : INotifyPropertyChanged
-    {
-        public string FilePath { get; set; }
-        public string FileName => Path.GetFileName(FilePath);
-        public BitmapSource Original { get; set; }
-        private BitmapSource _processed;
-        public BitmapSource Processed
-        {
-            get => _processed;
-            set { _processed = value; OnPropertyChanged(); }
-        }
-        private string _status = "Ожидает";
-        public string Status
-        {
-            get => _status;
-            set { _status = value; OnPropertyChanged(); }
-        }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string name = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-    }
-
     public class ClientViewModel : INotifyPropertyChanged
     {
         private readonly ClientService _clientService;
-        private CancellationTokenSource _cts;
 
         public ObservableCollection<ImageItem> Images { get; } = new();
 
@@ -63,7 +39,7 @@ namespace ClientApp.ViewModels
         public ClientViewModel()
         {
             _clientService = new ClientService("127.0.0.1", 5001);
-            _clientService.ProgressUpdated += s => Application.Current.Dispatcher.Invoke(() => ProgressText = s);
+            _clientService.ProgressUpdated += OnTaskUpateStatus;
             _clientService.TaskCompleted += OnTaskCompleted;
             _clientService.ErrorOccurred += e => Application.Current.Dispatcher.Invoke(() => ProgressText = "ОШИБКА: " + e);
 
@@ -136,7 +112,7 @@ namespace ClientApp.ViewModels
 
             try
             {
-                await _clientService.SendTaskAndReceiveResultAsync(batch, CancellationToken.None);
+                await _clientService.SendBatchAndReceiveResultAsync(batch, CancellationToken.None);
             }
             catch (Exception ex)
             {
@@ -148,19 +124,30 @@ namespace ClientApp.ViewModels
             }
         }
 
+        private void OnTaskUpateStatus(UpdateTaskStatusData data)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                var item = Images.FirstOrDefault(i => i.FileName == data.FileName);
+
+                Debug.WriteLine($"Data FILENAME: {data.FileName}");
+
+                if (item != null)
+                {
+                    item.Status = data.StatusText;
+                }
+            });
+        }
+
         private void OnTaskCompleted(ImageMessage result)
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
-                Debug.WriteLine($"[ClientViewModel] Проверяем результат для {result.FileName}");
-                foreach (var img in Images) Console.WriteLine($" - ImageItem: {img.FileName}");
-
                 var item = Images.FirstOrDefault(i => result.FileName.EndsWith(i.FileName, StringComparison.OrdinalIgnoreCase));
 
                 if (item != null)
                 {
                     item.Processed = BytesToBitmapSource(result.ImageData);
-                    item.Status = "Готово";
                 }
 
                 if (Images.All(i => i.Status == "Готово" || i.Status.Contains("Ошибка")))
@@ -175,29 +162,23 @@ namespace ClientApp.ViewModels
         {
             if (bytes == null || bytes.Length == 0)
             {
-                Debug.WriteLine("[BytesToBitmapSource] Массив байт пустой или null.");
                 return null;
             }
 
             try
             {
-                Debug.WriteLine($"[BytesToBitmapSource] Начало загрузки изображения. Размер массива: {bytes.Length} байт.");
-
                 using var ms = new MemoryStream(bytes);
                 var image = new BitmapImage();
 
                 image.BeginInit();
-                Debug.WriteLine("[BytesToBitmapSource] BeginInit выполнен.");
-
+             
                 image.CacheOption = BitmapCacheOption.OnLoad; 
                 image.StreamSource = ms;
 
                 image.EndInit();
-                Debug.WriteLine("[BytesToBitmapSource] EndInit выполнен.");
-
+                
                 image.Freeze(); 
-                Debug.WriteLine("[BytesToBitmapSource] Freeze выполнен. Изображение успешно создано.");
-
+               
                 return image;
             }
             catch (Exception ex) when (ex is EndOfStreamException || ex is IOException || ex is NotSupportedException || ex is ArgumentException)

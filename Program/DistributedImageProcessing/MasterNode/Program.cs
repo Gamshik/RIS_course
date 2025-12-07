@@ -11,7 +11,7 @@
             // Порты по умолчанию
             int slavePort = 5000;  // Для подключения Slave-узлов
             int clientPort = 5001; // Для подключения Клиентов (TCP)
-            int udpPort = 5002;    // Для отправки прогресса Клиентам (UDP)
+            //int udpPort = 5002;    // Для отправки прогресса Клиентам (UDP)
 
             // Если передали аргументы командной строки
             if (args.Length >= 1 && int.TryParse(args[0], out int sPort))
@@ -22,14 +22,14 @@
             {
                 clientPort = cPort;
             }
-            if (args.Length >= 3 && int.TryParse(args[2], out int uPort))
-            {
-                udpPort = uPort;
-            }
+            //if (args.Length >= 3 && int.TryParse(args[2], out int uPort))
+            //{
+            //    udpPort = uPort;
+            //}
 
             Console.WriteLine($"Slave TCP порт: {slavePort}");
             Console.WriteLine($"Client TCP порт: {clientPort}");
-            Console.WriteLine($"Client UDP порт: {udpPort}");
+            //Console.WriteLine($"Client UDP порт: {udpPort}");
             Console.WriteLine();
 
             // Создаём CancellationToken для корректной остановки
@@ -44,7 +44,7 @@
             };
 
             // Создаём и запускаем Master-сервер
-            MasterServer server = new MasterServer(slavePort, clientPort, udpPort);
+            MasterServer server = new MasterServer(slavePort, clientPort);
 
             try
             {

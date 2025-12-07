@@ -42,9 +42,7 @@ namespace MasterNode
             TaskMessage = message;
             ClientStream = clientStream;
 
-            // Предполагаем, что UDP-порт для прогресса - это TCP-порт + 1. 
-            // В реальной системе клиент должен явно сообщить свой UDP-порт.
-            ClientUdpEndpoint = new IPEndPoint(clientEndpoint.Address, 6000); // Фиксир
+            ClientUdpEndpoint = new IPEndPoint(clientEndpoint.Address, 6000); 
 
             Status = 0; // В очереди
             CurrentSlave = null;

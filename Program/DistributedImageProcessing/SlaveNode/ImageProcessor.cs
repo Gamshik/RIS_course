@@ -32,19 +32,9 @@ namespace SlaveNode
                 Console.WriteLine($"[{_slaveName}] Размер изображения: {sourceImage.Width}x{sourceImage.Height}");
 
                 Bitmap processedImage;
-                //if (sourceImage.Width * sourceImage.Height > 1000000) // Больше 1 мегапикселя
-                //{
-                //    Console.WriteLine($"[{_slaveName}] Используется быстрый алгоритм");
-                //    processedImage = RobertsOperator.ApplyRobertsOperatorFast(sourceImage);
-                //}
-                //else
-                //{
-                //    Console.WriteLine($"[{_slaveName}] Используется стандартный алгоритм");
-                //    processedImage = RobertsOperator.ApplyRobertsOperator(sourceImage);
-                //}
 
                 Console.WriteLine($"[{_slaveName}] Используется стандартный алгоритм");
-                processedImage = RobertsOperator.ApplyRobertsOperator(sourceImage);
+                processedImage = RobertsOperator.ApplyRobertsOperatorParallel(sourceImage);
 
                 // Определяем формат для сохранения
                 ImageFormat format = GetImageFormat(inputMessage.Format);

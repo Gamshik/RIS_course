@@ -7,10 +7,9 @@ namespace MasterNode
     {
         private readonly UdpClient _udpClient;
 
-        public ProgressSender(int masterUdpPort)
+        public ProgressSender()
         {
             _udpClient = new UdpClient();
-            Console.WriteLine($"[MasterUDP] UDP отправитель готов");
         }
 
         /// <summary>
@@ -23,14 +22,15 @@ namespace MasterNode
                 totalImages,
                 processedImages,
                 task.Status,
+                task.FileName,
                 info
             );
 
             try
             {
                 byte[] data = MessageSerializer.SerializeProgressMessage(message);
+                Console.WriteLine($"Send process: {task.ClientUdpEndpoint}, {task.Status}");
                 await _udpClient.SendAsync(data, data.Length, task.ClientUdpEndpoint);
-                Console.WriteLine($"[MasterUDP] Прогресс ID {task.ImageId}: {processedImages}/{totalImages} → {task.ClientUdpEndpoint}");
             }
             catch (Exception ex)
             {
@@ -38,7 +38,6 @@ namespace MasterNode
             }
         }
 
-        // ← Оставляем старую перегрузку для совместимости (одиночные задачи)
         public async Task SendProgressAsync(ImageTask task, int totalImages, string info = "")
         {
             int processed = task.Status == 2 ? 1 : 0;

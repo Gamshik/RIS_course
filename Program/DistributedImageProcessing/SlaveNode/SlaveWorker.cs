@@ -103,35 +103,10 @@ namespace SlaveNode
                     int messageType = BitConverter.ToInt32(header, 0);
                     int payloadLength = BitConverter.ToInt32(header, 4);
 
-                    // 2️⃣ Если мусор, двигаем окно по одному байту
-                    while ((MessageType)messageType != MessageType.MasterToSlaveTask)
-                    {
-                        Console.WriteLine($"[{_slaveName}] Мусор в потоке: messageType={messageType}. Сдвигаем окно на 1 байт...");
-
-                        // Сдвигаем header влево на 1 байт
-                        Array.Copy(header, 1, header, 0, 7);
-
-                        // Читаем новый байт в конец header
-                        int r = await ReadExactAsync(_stream, header, 7, 1, cancellationToken);
-                        if (r < 1)
-                        {
-                            Console.WriteLine($"[{_slaveName}] Не удалось прочитать новый байт, соединение потеряно");
-                            throw new Exception("Поток повреждён");
-                        }
-
-                        // Снова вычисляем messageType
-                        messageType = BitConverter.ToInt32(header, 0);
-                        payloadLength = BitConverter.ToInt32(header, 4);
-                    }
-
-
-                    if (payloadLength < 0 || payloadLength > 100_000_000)
+                    if (payloadLength < 0)
                         throw new Exception($"Некорректная длина payload: {payloadLength}");
 
-                    Console.WriteLine($"[{_slaveName}] messageType: {messageType}. payloadLength: {payloadLength}");
-
-
-                    // 2️⃣ Читаем payload целиком
+                    
                     byte[] payload = new byte[payloadLength];
                     int readPayload = await ReadExactAsync(_stream, payload, 0, payloadLength, cancellationToken);
                     if (readPayload < payloadLength)
@@ -140,59 +115,12 @@ namespace SlaveNode
                         break;
                     }
 
-                    // 3️⃣ Собираем полное сообщение
-                    byte[] fullMessage = new byte[8 + payloadLength];
-                    Buffer.BlockCopy(header, 0, fullMessage, 0, 8);
-                    Buffer.BlockCopy(payload, 0, fullMessage, 8, payloadLength);
-
-                    ImageMessage taskMessage = MessageSerializer.DeserializeImageMessage(fullMessage, out _);
+                    ImageMessage taskMessage = MessageSerializer.DeserializeImageMessage(payload, messageType, payloadLength);
                     ImageMessage result = _imageProcessor.ProcessImage(taskMessage);
 
-                    // 5️⃣ Отправляем результат
                     byte[] resultData = MessageSerializer.SerializeImageMessage(MessageType.SlaveToMasterResult, result);
                     await _stream.WriteAsync(resultData, cancellationToken);
                     await _stream.FlushAsync();
-
-                    //if ((MessageType)messageType != MessageType.MasterToSlaveTask)
-                    //{
-                    //    Console.WriteLine($"[{_slaveName}] Неизвестный тип сообщения: {messageType}");
-                    //    Console.WriteLine($"[{_slaveName}] Заголовок (hex): {BitConverter.ToString(header)}");
-                    //    // Дополнительно — прочитать payloadLength (если разумен) и вывести первые 32 байта полезной нагрузки для диагностики
-                    //    if (payloadLength > 0 && payloadLength < 10_000_000)
-                    //    {
-                    //        try
-                    //        {
-                    //            byte[] preview = new byte[Math.Min(payloadLength, 32)];
-                    //            int got = await ReadExactAsync(_stream, preview, 0, preview.Length, cancellationToken);
-                    //            Console.WriteLine($"[{_slaveName}] Начало полезной нагрузки (hex): {BitConverter.ToString(preview, 0, got)}");
-                    //        }
-                    //        catch (Exception ex)
-                    //        {
-                    //            Console.WriteLine($"[{_slaveName}] Не удалось прочитать превью payload: {ex.Message}");
-                    //        }
-                    //    }
-                    //    break;
-                    //}
-
-                    //Console.WriteLine($"[{_slaveName}] Тип сообщения: {messageType}");
-
-                    //byte[] payload = new byte[payloadLength];
-                    //await ReadExactAsync(_stream, payload, 0, payloadLength, cancellationToken);
-
-                    //byte[] fullMessage = new byte[8 + payloadLength];
-                    //Buffer.BlockCopy(header, 0, fullMessage, 0, 8);
-                    //Buffer.BlockCopy(payload, 0, fullMessage, 8, payloadLength);
-
-                    //ImageMessage taskMessage = MessageSerializer.DeserializeImageMessage(fullMessage, out _);
-
-                    //ImageMessage resultMessage = _imageProcessor.ProcessImage(taskMessage);
-
-                    //byte[] resultData = MessageSerializer.SerializeImageMessage(MessageType.SlaveToMasterResult, resultMessage);
-
-                    //await _stream.WriteAsync(resultData, cancellationToken);
-                    //await _stream.FlushAsync(cancellationToken);
-                    
-                    Console.WriteLine($"[{_slaveName}] Задача ID {taskMessage.ImageId} выполнена. Ожидаем следующие задачи...");
                 }
                 catch (Exception ex)
                 {
@@ -205,7 +133,6 @@ namespace SlaveNode
 
         /// <summary>
         /// Читает точное количество байт из потока
-        /// ИСПРАВЛЕНО: Улучшена обработка ошибок
         /// </summary>
         private async Task<int> ReadExactAsync(NetworkStream stream, byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
@@ -217,7 +144,6 @@ namespace SlaveNode
 
                 if (read == 0)
                 {
-                    // Соединение закрыто корректно
                     return totalRead;
                 }
 
