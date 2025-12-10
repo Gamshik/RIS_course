@@ -1,0 +1,2 @@
+MasterNode.exe 5000 5001 5002
+SlaveNode.exe Slave-1 127.0.0.1 5000
