@@ -13,6 +13,71 @@ namespace Common.ImageProcessing
         /// </summary>
         /// <param name="sourceImage">Исходное изображение</param>
         /// <returns>Изображение с выделенными границами</returns>
+        public static Bitmap ApplyRobertsOperator(Bitmap sourceImage)
+        {
+            if (sourceImage == null)
+                throw new ArgumentNullException(nameof(sourceImage));
+
+            int width = sourceImage.Width;
+            int height = sourceImage.Height;
+
+            // Создаём результирующее изображение
+            Bitmap resultImage = new Bitmap(width, height);
+
+            // Преобразуем в оттенки серого и применяем оператор
+            for (int y = 0; y < height - 1; y++)
+            {
+                for (int x = 0; x < width - 1; x++)
+                {
+                    // Получаем 4 пикселя для ядер 2x2
+                    Color p00 = sourceImage.GetPixel(x, y);
+                    Color p01 = sourceImage.GetPixel(x + 1, y);
+                    Color p10 = sourceImage.GetPixel(x, y + 1);
+                    Color p11 = sourceImage.GetPixel(x + 1, y + 1);
+
+                    // Преобразуем в оттенки серого (яркость)
+                    int gray00 = (int)(p00.R * 0.299 + p00.G * 0.587 + p00.B * 0.114);
+                    int gray01 = (int)(p01.R * 0.299 + p01.G * 0.587 + p01.B * 0.114);
+                    int gray10 = (int)(p10.R * 0.299 + p10.G * 0.587 + p10.B * 0.114);
+                    int gray11 = (int)(p11.R * 0.299 + p11.G * 0.587 + p11.B * 0.114);
+
+                    // Применяем ядра Робертса
+                    // Gx = | +1   0 |    Gy = |  0  +1 |
+                    //      |  0  -1 |         | -1   0 |
+
+                    int gx = gray00 - gray11;  // Диагональ ↘
+                    int gy = gray01 - gray10;  // Диагональ ↙
+
+                    // Вычисляем градиент: G = √(Gx² + Gy²)
+                    int gradient = (int)Math.Sqrt(gx * gx + gy * gy);
+
+                    // Ограничиваем значение диапазоном 0-255
+                    gradient = Math.Min(255, Math.Max(0, gradient));
+
+                    // Записываем результат (чёрно-белое изображение)
+                    Color resultColor = Color.FromArgb(gradient, gradient, gradient);
+                    resultImage.SetPixel(x, y, resultColor);
+                }
+            }
+
+            // Заполняем последнюю строку и столбец чёрным (граничные пиксели)
+            for (int x = 0; x < width; x++)
+            {
+                resultImage.SetPixel(x, height - 1, Color.Black);
+            }
+            for (int y = 0; y < height; y++)
+            {
+                resultImage.SetPixel(width - 1, y, Color.Black);
+            }
+
+            return resultImage;
+        }
+
+        /// <summary>
+        /// Применяет оператор Робертса к изображению
+        /// </summary>
+        /// <param name="sourceImage">Исходное изображение</param>
+        /// <returns>Изображение с выделенными границами</returns>
         public static Bitmap ApplyRobertsOperatorParallel(Bitmap sourceImage)
         {
             if (sourceImage == null)
@@ -38,10 +103,15 @@ namespace Common.ImageProcessing
 
             unsafe
             {
+                var options = new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = 12 // нужное количество потоков
+                };
+
                 byte* srcPtr = (byte*)srcData.Scan0;
                 byte* dstPtr = (byte*)dstData.Scan0;
 
-                Parallel.For(0, height - 1, y =>
+                Parallel.For(0, height - 1, options, y =>
                 {
                     byte* rowSrc = srcPtr + y * strideSrc;
                     byte* nextRowSrc = srcPtr + (y + 1) * strideSrc;

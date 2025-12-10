@@ -169,7 +169,7 @@ namespace MasterNode
             Console.WriteLine($"[Scheduler] Задача ID {task.ImageId} завершена");
 
             // DELAY IMITATION
-            await Task.Delay(1000);
+            //await Task.Delay(1000);
 
             await SendResultToClient(task, resultMessage);
 

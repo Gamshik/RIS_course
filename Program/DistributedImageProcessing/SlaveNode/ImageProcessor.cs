@@ -34,6 +34,7 @@ namespace SlaveNode
                 Bitmap processedImage;
 
                 processedImage = RobertsOperator.ApplyRobertsOperatorParallel(sourceImage);
+                //processedImage = RobertsOperator.ApplyRobertsOperator(sourceImage);
 
                 // Определяем формат для сохранения
                 ImageFormat format = GetImageFormat(inputMessage.Format);
